@@ -1,22 +1,22 @@
 param (
-    [Parameter(Mandatory = $true, ValueFromRemainingArguments = $true)]
-    [string[]]$Files
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$FilesFromParam
 )
 
-$title = ""
-$isVertProc = $false
-$isTriProc = $false
-$vert_amount = 0
-$tri_amount = 0
-$tri_size = 0
-$vert_numbers= @()
-$tri_numbers = @()
-
-foreach ($file in $Files){
+foreach ($file in $FilesFromParam){
     if (-not (Test-Path $file)){
         Write-Error "A bemeneti fajl nem talalhato: $inputFile"
         continue
     }
+
+    $title = ""
+    $isVertProc = $false
+    $isTriProc = $false
+    $vert_amount = 0
+    $tri_amount = 0
+    $tri_size = 0
+    $vert_numbers= @()
+    $tri_numbers = @()
 
     $data = Get-Content $file
 
