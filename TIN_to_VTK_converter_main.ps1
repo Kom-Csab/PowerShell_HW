@@ -11,6 +11,17 @@ param (
 
 begin {
     $Files = @()
+
+    function Validator {
+        param (
+            $value,
+            $index
+        )
+        
+        if (-not (($value -match "^[0-9]+$"))){
+            throw "Error! There is a syntax error in the input file! Check line: $index"
+        }
+    }
 }
 
 process {
@@ -44,35 +55,37 @@ end {
         $vert_numbers= @()
         $tri_numbers = @()
 
-        $data = Get-Content $file
+        $data = @((Get-Content $file).Split("`n"))
 
-        foreach ($line in $data){
-            if ($line -match '^TNAM') {
+        for ($i = 0; $i -lt $data.Count; $i++){
+            if ($data[$i] -match '^TNAM') {
                 $isTriProc = $false
-                $title = $line.Split(' ')[1]
+                $title = $data[$i].Split(' ')[1]
             }
-            elseif ($line -match '^VERT'){
-                $vert_amount = $line.Split(' ')[1]
+            elseif ($data[$i] -match '^VERT'){
+                $vert_amount = $data[$i].Split(' ')[1]
+                Validator -value $vert_amount -index ([int]$i+1)
                 $vert_numbers = @()
                 $isVertProc = $true
             }
-            elseif ($isVertProc -and $line -notmatch '^(BEGT|TNAM|MAT|TRI|ENDT|TIN)') {
-                $numbers = $line.Split(' ')
-                for ($i = 0; $i -lt 3; $i ++){
-                    $vert_numbers += $numbers[$i]
+            elseif ($isVertProc -and $data[$i] -notmatch '^(BEGT|TNAM|MAT|TRI|ENDT|TIN)') {
+                $numbers = $data[$i].Split(' ')
+                for ($j = 0; $j -lt 3; $j ++){
+                    $vert_numbers += $numbers[$j]
                 }
             }
-            elseif ($line -match '^TRI') {
+            elseif ($data[$i] -match '^TRI') {
                 $isVertProc = $false
-                [int]$tri_amount = $line.Split(' ')[1]
-                $tri_size = $tri_amount * 4
+                $tri_amount = $data[$i].Split(' ')[1]
+                $tri_size = [int]$tri_amount * 4
+                Validator -value $tri_amount -index ([int]$i+1)
                 $tri_numbers = @()
                 $isTriProc = $true
             }
-            elseif ($isTriProc -and $line -notmatch '^(BEGT|TNAM|MAT|TRI|ENDT|TIN)') {
-                $tri_numbers += $line.Split(' ')
+            elseif ($isTriProc -and $data[$i] -notmatch '^(BEGT|TNAM|MAT|TRI|ENDT|TIN)') {
+                $tri_numbers += $data[$i].Split(' ')
             }
-            elseif ($line -match "^ENDT") {
+            elseif ($data[$i] -match "^ENDT") {
                 if ($title -eq ""){
                     $title = "vtk output"
                 }
@@ -117,5 +130,5 @@ POINTS $vert_amount float
     }
 
     $outputContent | Set-Content -Path $OutputFile
-    Write-Host "A kimeneti fajl sikeresen letrehozva: $OutputFile"
+    Write-Host "`nA kimeneti fajl sikeresen letrehozva: $OutputFile`n"
 }
