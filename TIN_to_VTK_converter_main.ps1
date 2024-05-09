@@ -12,14 +12,28 @@ param (
 begin {
     $Files = @()
 
-    function Validator {
+    function AmountValidator {
         param (
             $value,
-            $index
+            $index,
+            $file
         )
         
         if (-not (($value -match "^[0-9]+$"))){
-            throw "Error! There is a syntax error in the input file! Check line: $index"
+            throw "Hiba! Szintaxis hiba van a megadott fajlban: $file`nEllenorizze az adott fajl kovetkezo sorat: $index`n"
+        }
+    }
+
+    function SyntaxChecker {
+        param (
+            $Numbers,
+            $Amount
+        )
+
+        if (-not ($Numbers.Count / 3 -eq $Amount)){
+            return 1
+        }else{
+            return 0
         }
     }
 }
@@ -57,6 +71,11 @@ end {
 
         $data = @((Get-Content $file).Split("`n"))
 
+        if ($data[0] -notmatch '^TIN'){
+            Write-Error "Hibas fajl! Kerem ellenorizze a megadott fajlt: $file"
+            continue
+        }
+
         for ($i = 0; $i -lt $data.Count; $i++){
             if ($data[$i] -match '^TNAM') {
                 $isTriProc = $false
@@ -64,7 +83,7 @@ end {
             }
             elseif ($data[$i] -match '^VERT'){
                 $vert_amount = $data[$i].Split(' ')[1]
-                Validator -value $vert_amount -index ([int]$i+1)
+                AmountValidator -value $vert_amount -index ([int]$i+1) -file $file
                 $vert_numbers = @()
                 $isVertProc = $true
             }
@@ -78,7 +97,7 @@ end {
                 $isVertProc = $false
                 $tri_amount = $data[$i].Split(' ')[1]
                 $tri_size = [int]$tri_amount * 4
-                Validator -value $tri_amount -index ([int]$i+1)
+                AmountValidator -value $tri_amount -index ([int]$i+1) -file $file
                 $tri_numbers = @()
                 $isTriProc = $true
             }
@@ -90,6 +109,11 @@ end {
                     $title = "vtk output"
                 }
             }
+        }
+
+        if((SyntaxChecker -Numbers $vert_numbers -Amount $vert_amount) -or (SyntaxChecker -Numbers $tri_numbers -Amount $tri_amount)){
+            Write-Error "Hiba tortent a fajl feldolgozasa kozben! Kerem ellenorizze, hogy megfelelo koordinata adatok vannak megadva! Fajl: $file"
+            continue
         }
 
         $outputContent += @"
